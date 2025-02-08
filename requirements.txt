@@ -1,0 +1,9 @@
+numpy
+opencv-python-headless
+msgpack-rpc-python 
+tensorflow
+stable-baselines3 
+gym
+Shimmy   
+pillow
+airsim
