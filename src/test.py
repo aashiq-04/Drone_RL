@@ -29,8 +29,8 @@ fig = plt.figure(figsize=(6, 6))
 ax = fig.add_subplot(111, projection='3d')
 
 # Run evaluation
-NUM_EPISODES = 10  # Number of test episodes
-MAX_STEPS = 200  # Max steps per episode
+NUM_EPISODES = 5  # Number of test episodes
+MAX_STEPS = 50  # Max steps per episode
 
 for episode in range(NUM_EPISODES):
     state = env.reset()

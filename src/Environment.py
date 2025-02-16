@@ -81,9 +81,9 @@ class DroneEnv3D(gym.Env):
                     break
                 
         self.target = np.array([
-            random.uniform(7,10),
-            random.uniform(7,10),
-            random.uniform(7,10)
+            random.uniform(6,8),
+            random.uniform(6,8),
+            random.uniform(6,8)
         ],dtype=np.float64)
         self.drone_vel = np.array([0.0, 0.0, 0.0], dtype=np.float64)  # Reset velocity
         self.path = [self.drone_pos.copy()]  # Initialize path history
@@ -104,7 +104,7 @@ class DroneEnv3D(gym.Env):
         
         # Add wind effect
         wind = np.random.uniform(-self.wind_strength, self.wind_strength, 3)
-        self.drone_pos += wind
+        self.drone_pos += wind * 0.3
         
         # Keep within boundaries
         self.drone_pos = np.clip(self.drone_pos, 0, self.space_size)
@@ -112,18 +112,20 @@ class DroneEnv3D(gym.Env):
         # Sensor Data
         lidar_readings = self.get_lidar_readings()
         imu_readings = self.get_imu_readings()
+        angluar_corrections = -0.1 * imu_readings[3:]
+        self.drone_vel += angluar_corrections
 
         # Avoid Obstacles
         safe_action = action.copy()
     
         if lidar_readings[2] < 1.0:  # Front obstacle
-            safe_action[1] = -0.5  # Move backward
+            safe_action[1] -=0.1  # Move backward
 
         if lidar_readings[0] < 1.0:  # Right obstacle
-            safe_action[0] = -0.5  # Move left
+            safe_action[0] -=0.1  # Move left
 
         if lidar_readings[1] < 1.0:  # Left obstacle
-            safe_action[0] = 0.5  # Move right
+            safe_action[0] += 0.1  # Move right
             
         self.drone_vel = 0.9 * self.drone_vel + 0.1 * safe_action
         self.drone_pos += self.drone_vel
@@ -143,6 +145,10 @@ class DroneEnv3D(gym.Env):
         # Reward function
         distance = np.linalg.norm(self.drone_pos - self.target)
         reward = -distance  # Closer = better
+        reward -= 0.1 * np.linalg.norm(self.drone_vel)
+        #boundary penalty 
+        boundary_penalty = np.sum(np.clip(self.drone_pos - [0,0,0],0,2))+ np.sum(np.clip([10,10,10]-self.drone_pos,0,2))
+        reward -=boundary_penalty
 
         if collision:
             reward -= 100  # Penalize collision
