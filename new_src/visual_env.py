@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from sample import DroneEnv3D
+from src_sac.Environment import DroneEnv3D
 
 # Create the environment
 env = DroneEnv3D()

@@ -11,7 +11,7 @@ class DroneEnv3D(gym.Env):
 
         # Define 3D space
         self.space_size = 10
-        self.target = np.array([9, 9, 9], dtype=np.float64)  # Target position
+        # self.target = np.array([9, 9, 9], dtype=np.float64)  # Target position
 
         # Continuous action space (x, y, z velocity changes)
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
@@ -23,26 +23,75 @@ class DroneEnv3D(gym.Env):
         self.wind_strength = 0.1  
 
         # Define obstacles (random poles)
-        self.num_obstacles = 5
+        self.num_obstacles = 10
         self.obstacles = []  # Initialize empty, generate on reset
 
         self.reset()
 
+    # def generate_obstacle(self):
+    #     """Generate random obstacle as (x, y, radius, height)"""
+    #     min_distance = 1.5
+    #     for _ in range(100):
+    #         x =  random.uniform(2, 8)
+    #         y =  random.uniform(2, 8)
+    #         radius = 0.6  # Fixed radius
+    #         height = random.uniform(5, 9)  # Tall poles
+    #         collision = False
+    #         for obs in self.obstacles:
+    #             ox, oy, oradius, _ = obs
+    #             distance = np.linalg.norm(np.array([x,y]) - np.array([ox,oy]))
+    #             if distance < (radius+oradius+min_distance):
+    #                 collision = True
+    #                 break
+    #         if not collision:
+    #             return (x, y, radius, height)
     def generate_obstacle(self):
-        """Generate random obstacle as (x, y, radius, height)"""
-        x = random.uniform(2, 8)
-        y = random.uniform(2, 8)
-        radius = 0.5  # Fixed radius
-        height = random.uniform(5, 9)  # Tall poles
-        return (x, y, radius, height)
+        while True:
+            x = random.uniform(2, 8)
+            y = random.uniform(2, 8)
+            radius = 0.5  
+            height = random.uniform(5, 9)  
+
+        # Check if new obstacle is far from existing ones
+            collision = False
+            for ox, oy, r, h in self.obstacles:
+                if np.linalg.norm(np.array([x, y]) - np.array([ox, oy])) < (radius + r + 1):  
+                    collision = True
+                    break
+
+            if not collision:
+                return (x, y, radius, height)
+  
+            return(random.uniform(2,8),random.uniform(2,8),0.5,random.uniform(5,9))
 
     def reset(self):
-        self.drone_pos = np.array([1, 1, 1], dtype=np.float64)  # Start position
+        valid_pos = False
+        while not valid_pos:
+            self.drone_pos = np.array([
+                random.uniform(0,3),
+                random.uniform(0,3),
+                random.uniform(0,3)
+            ],dtype=np.float64)
+            valid_pos = True
+            for obs in self.obstacles:
+                ox,oy,r,h = obs
+                dist = np.linalg.norm(self.drone_pos[:2]-np.array([ox,oy]))
+                if dist < r and self.drone_pos[2]<h:
+                    valid_pos=False
+                    break
+                
+        self.target = np.array([
+            random.uniform(7,10),
+            random.uniform(7,10),
+            random.uniform(7,10)
+        ],dtype=np.float64)
         self.drone_vel = np.array([0.0, 0.0, 0.0], dtype=np.float64)  # Reset velocity
         self.path = [self.drone_pos.copy()]  # Initialize path history
 
         # Randomize obstacles on reset
-        self.obstacles = [self.generate_obstacle() for _ in range(self.num_obstacles)]
+        self.obstacles = []
+        for _ in range(self.num_obstacles):
+            self.obstacles.append(self.generate_obstacle())
         
         return self.get_observation()
 
@@ -184,4 +233,4 @@ class DroneEnv3D(gym.Env):
         X = r * np.cos(theta_grid) + x
         Y = r * np.sin(theta_grid) + y
         Z = z_grid
-        ax.plot_surface(X, Y, Z, color='blue', alpha=0.5)
+        ax.plot_surface(X, Y, Z, color='blue', alpha=0.5,edgecolor='k')
