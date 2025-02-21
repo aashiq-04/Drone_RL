@@ -1,6 +1,6 @@
 drones/
 __pycache__/
 src_sac/
-src/__pycache__/
-src/checkpoints/
+# src/__pycache__/
+# src/checkpoints/
 .vscode/
