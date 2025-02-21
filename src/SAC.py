@@ -44,7 +44,7 @@ class Critic(nn.Module):
         return self.q1(sa), self.q2(sa)  # Double Q-learning
 
 class SACAgent:
-    def __init__(self, state_dim, action_dim, max_action, gamma=0.99, tau=0.005, lr=3e-4):
+    def __init__(self, state_dim, action_dim, max_action, gamma=0.99, tau=0.005, lr=3e-4, alpha=0.2):
         self.actor = Actor(state_dim, action_dim, max_action).float()
         self.critic = Critic(state_dim, action_dim).float()
         self.critic_target = Critic(state_dim, action_dim).float()
@@ -55,6 +55,7 @@ class SACAgent:
 
         self.gamma = gamma
         self.tau = tau
+        self.alpha = alpha
 
     def select_action(self, state):
         """Returns action from policy (no exploration noise needed)"""
@@ -74,7 +75,7 @@ class SACAgent:
 
         # Get next action from actor
         next_actions = self.actor(next_states)
-        
+
         # Get target Q values
         q1_target, q2_target = self.critic_target(next_states, next_actions)
         q_target = torch.min(q1_target, q2_target)
@@ -89,7 +90,9 @@ class SACAgent:
         self.critic_optimizer.step()
 
         # Update policy (Actor)
-        actor_loss = -self.critic.q1(torch.cat([states, self.actor(states)], dim=-1)).mean()
+        q1_actor = self.critic.q1(states, self.actor(states))[0]
+        actor_loss = -(q1_actor - self.alpha * self.actor(states).pow(2).mean()).mean()
+
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()

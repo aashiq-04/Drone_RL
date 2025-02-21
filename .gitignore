@@ -1,6 +1,6 @@
 drones/
 __pycache__/
-ppo_drone_navigation_tunes.zip
 src_sac/
 src/__pycache__/
 src/checkpoints/
+.vscode/

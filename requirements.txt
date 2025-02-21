@@ -7,3 +7,6 @@ gym
 Shimmy   
 pillow
 airsim
+torch
+gymnasium
+pathfinding
