@@ -43,14 +43,25 @@ class DroneEnv3D(gym.Env):
         return None  # Should not happen under normal conditions
 
     def is_valid_position(self, pos):
-        """Check if the position is valid (not inside obstacles)"""
-        clearance = 0.2
+        """Check if the position is valid (not inside obstacles)."""
+        if not (0 <= pos[0] < self.space_size and 0 <= pos[1] < self.space_size and 0 <= pos[2] < self.space_size):
+            return False  # Out of bounds
+        
+        if not self.obstacles:  
+            return True  # If there are no obstacles, all positions are valid
+
+        clearance = 0.25
         x, y, z = pos
+        
         for ox, oy, r, h in self.obstacles:
-            if np.linalg.norm(np.array([x, y]) - np.array([ox, oy])) < (r+ clearance) :
-                if 0 <= z <= (h+clearance):
-                    return False
-        return True
+            distance_xy = np.linalg.norm(np.array([x, y]) - np.array([ox, oy]))
+            
+            if distance_xy < (r + clearance):
+                if z >= 0 and z <= h + clearance:  
+                    return False  # Collision detected
+
+        return True  # No collision detected
+
 
     def reset(self):
         print("Resetting environment...")  # Debugging
@@ -174,7 +185,7 @@ class DroneEnv3D(gym.Env):
     #     self.path.append(self.drone_pos.copy())
     #     return self.get_observation(), reward, done, {}
     def step(self, action):
-        self.drone_pos +=action
+        self.drone_pos +=np.squeeze(action)
         """Move the drone along the A* planned path while avoiding obstacles dynamically."""
         if not self.a_star_path:
             self.a_star_path = self.a_star_search(self.drone_pos, self.target)
@@ -238,7 +249,10 @@ class DroneEnv3D(gym.Env):
     
     def get_imu_readings(self):
         """Simulate IMU readings (orientation and angular velocity)."""
-        return np.zeros(6)
+        orientation = np.random.uniform(-0.1, 0.1, size=3)  # Simulated roll, pitch, yaw
+        angular_velocity = self.drone_vel * 0.1  # Assume angular velocity depends on movement
+        acceleration = np.gradient(self.drone_vel)
+        return np.concatenate([orientation, angular_velocity,acceleration])
 
     def render(self):
         """Render the environment."""

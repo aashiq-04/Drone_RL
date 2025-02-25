@@ -4,3 +4,5 @@ src_sac/
 src/__pycache__/
 src/checkpoints/
 .vscode/
+*.pth
+*.pyc

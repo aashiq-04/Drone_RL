@@ -9,6 +9,7 @@ def visualize_environment(env):
     ax = fig.add_subplot(111, projection='3d')
     
     # Plot boundaries
+    
     ax.set_xlim(0, env.space_size)
     ax.set_ylim(0, env.space_size)
     ax.set_zlim(0, env.space_size)
@@ -27,7 +28,7 @@ def visualize_environment(env):
     path = np.array(env.path)
     if len(path) > 1:
         ax.plot(path[:, 0], path[:, 1], path[:, 2], color='blue', linestyle='-', marker='o', markersize=3, label="Path")
-    
+    ax.view_init(elev=90)
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")

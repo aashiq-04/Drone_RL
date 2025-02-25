@@ -9,9 +9,9 @@ class Actor(nn.Module):
         super(Actor, self).__init__()
         self.net = nn.Sequential(
             nn.Linear(state_dim, 256),
-            nn.ReLU(),
+            nn.SiLU(),
             nn.Linear(256, 256),
-            nn.ReLU(),
+            nn.SiLU(),
             nn.Linear(256, action_dim),
             nn.Tanh()  # Outputs actions between [-1, 1]
         )
@@ -26,9 +26,9 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.q1 = nn.Sequential(
             nn.Linear(state_dim + action_dim, 256),
-            nn.ReLU(),
+            nn.SiLU(),
             nn.Linear(256, 256),
-            nn.ReLU(),
+            nn.SiLU(),
             nn.Linear(256, 1)
         )
         self.q2 = nn.Sequential(
@@ -46,7 +46,7 @@ class Critic(nn.Module):
         return q1_value, q2_value  # Double Q-learning
 
 class SACAgent:
-    def __init__(self, state_dim, action_dim, max_action, gamma=0.99, tau=0.005, lr=3e-4, alpha=0.02):
+    def __init__(self, state_dim, action_dim, max_action, gamma=0.99, tau=0.005, lr=1e-4, alpha=0.02):
         self.actor = Actor(state_dim, action_dim, max_action).float()
         self.critic = Critic(state_dim, action_dim).float()
         self.critic_target = Critic(state_dim, action_dim).float()
@@ -58,7 +58,7 @@ class SACAgent:
 
         self.gamma = gamma
         self.tau = tau
-        
+        self.noise_std = 0.2
         # Automatic Temperature (Alpha) Adjustment
         self.target_entropy = -action_dim
         self.log_alpha = torch.tensor(np.log(alpha), requires_grad=True)
@@ -67,13 +67,14 @@ class SACAgent:
 
         self.update_counter = 0  # Counter for delayed target updates
 
-    def select_action(self, state, explore=True):
+    def select_action(self, state, explore=True,noise_decay = 0.99,min_noise=0.05):
         """Returns action from policy"""
         state = torch.FloatTensor(state).unsqueeze(0)
         action = self.actor(state).cpu().detach().numpy()[0]
 
         if explore:
-            noise = np.random.normal(0, 0.2, size=action.shape)
+            self.noise_std = max(self.noise_std * noise_decay, min_noise)
+            noise = np.random.normal(0, self.noise_std, size=action.shape)
             action = np.clip(action + noise, -self.max_action, self.max_action)
 
         return action
