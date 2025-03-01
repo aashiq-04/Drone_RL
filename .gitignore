@@ -4,5 +4,12 @@ src_sac/
 src/__pycache__/
 src/checkpoints/
 .vscode/
-*.pth
+README.MD
 *.pyc
+astar/checkpoints/
+astar/checkpoints_sac/
+astar/checkpoints1/
+astar/New_checkpoint_sac/
+astar/saved_plots/
+astar/ENV2.py
+astar/ENV3.py

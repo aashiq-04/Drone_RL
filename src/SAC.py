@@ -66,6 +66,7 @@ class SACAgent:
         self.alpha = alpha  # Initial alpha value
 
         self.update_counter = 0  # Counter for delayed target updates
+        
 
     def select_action(self, state, explore=True):
         """Returns action from policy"""

@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from mpl_toolkits.mplot3d import Axes3D
-from ENV2 import DroneEnv3D  # Import the environment
+from Env import DroneEnv3D  # Import the environment
 
 def visualize_environment(env):
     fig = plt.figure(figsize=(8, 8))

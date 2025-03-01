@@ -55,7 +55,6 @@ class SACAgent:
         self.max_action = max_action
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr)
-
         self.gamma = gamma
         self.tau = tau
         self.noise_std = 0.2
@@ -66,12 +65,13 @@ class SACAgent:
         self.alpha = alpha  # Initial alpha value
 
         self.update_counter = 0  # Counter for delayed target updates
+    
+
 
     def select_action(self, state, explore=True,noise_decay = 0.99,min_noise=0.05):
         """Returns action from policy"""
         state = torch.FloatTensor(state).unsqueeze(0)
         action = self.actor(state).cpu().detach().numpy()[0]
-
         if explore:
             self.noise_std = max(self.noise_std * noise_decay, min_noise)
             noise = np.random.normal(0, self.noise_std, size=action.shape)
@@ -79,6 +79,10 @@ class SACAgent:
 
         return action
 
+    def load_model(self, actor, critic):
+        self.actor.load_state_dict(actor)
+        self.critic.load_state_dict(critic)
+        return;
     def train(self, replay_buffer, batch_size=64):
         """Samples from buffer and updates networks"""
         actual_batch_size = min(batch_size, len(replay_buffer))
