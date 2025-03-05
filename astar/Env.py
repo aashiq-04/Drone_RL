@@ -21,12 +21,13 @@ class DroneEnv3D(gym.Env):
         self.obstacles = []  
         self.grid_size = 1  
         self.D =0.0
+        self.reset()
+        self.visited_pos = set()
         self.ds = [0.0] * 9
         self.dmin = min(self.ds)
         self.global_dm = 0.0
         self.min_distances_at_each_step = []
         self.collision_count = 0
-        self.reset()
     def generate_obstacle(self):
         max_attempts = 150  # Prevent infinite loops
         min_clearance = 0.7 # Minimum required distance between obstacles
@@ -90,7 +91,7 @@ class DroneEnv3D(gym.Env):
 
         attempts = 0
         while attempts < 50:
-            self.target = np.array([random.uniform(8, 10), random.uniform(8, 10), random.uniform(6,8)], dtype=np.float64)
+            self.target = np.array([random.uniform(6,9), random.uniform(5, 8), random.uniform(6,8)], dtype=np.float64)
             if self.is_valid_position(self.target) and np.linalg.norm(self.drone_pos - self.target) > 4:
                 break
             attempts += 1
@@ -111,20 +112,18 @@ class DroneEnv3D(gym.Env):
                           (self.drone_pos[2]-z)**2) - radius
             obstacle_distance.append(d)
         obstacle_distance.sort()
-        
         for i in range(min(9,len(obstacle_distance))):
             self.ds[i] = obstacle_distance[i]
         self.dmin = min(self.ds)
         self.global_dm = min(self.global_dm, self.dmin)
         self.min_distances_at_each_step.append(self.dmin)
 
-    
-    
-    def check_collision(self,safety_distance=0.2):
+    def check_collision(self,safety_distance=0.3):
         # print(abs(self.dmin)
         return abs(self.dmin)<=safety_distance
-    
-    
+    def exploration_efficiency(self):
+        total_cells = self.space_size**3
+        return len(self.visited_pos)/total_cells
     def step(self, action):
         """Move the drone using SAC actions while avoiding obstacles dynamically."""
         action = np.array(action).squeeze()
@@ -138,23 +137,30 @@ class DroneEnv3D(gym.Env):
         
         # **Use the SAC model's action to update the drone's position**
         delta_pos = np.array(action)  # SAC outputs small movement changes (dx, dy, dz)
-        next_position = self.drone_pos + delta_pos  # Apply SAC action
         self.drone_pos = np.array(self.drone_pos)
+        next_position = self.drone_pos + delta_pos  # Apply SAC action
         next_position = np.clip(next_position, 0, self.space_size - 1)
         if np.any(next_position < 0) or np.any(next_position >= self.space_size):
             reward -= 50
 
         if self.is_valid_position(next_position) == False:
-            reward -= 50  # Penalize invalid moves (collision risk)
+            reward -= 20  # Penalize invalid moves (collision risk)
+            
+        lidar_readings = self.get_lidar_readings()
+        obstacle_detected = any(distance < 0.4 for distance in lidar_readings)  # Threshold of 1 unit
+
+        if obstacle_detected and self.is_valid_position(self.drone_pos):
+            reward -= 50  # Penalize only when moving near obstacles
 
         # **Check if the new position is valid (not colliding with obstacles)**
                 
-        self.drone_pos = next_position  
+        self.drone_pos = next_position 
+        self.visited_pos.add(tuple(self.drone_pos)) 
             
-        if abs(self.dmin)< 0.5:
-            reward-=(0.5-self.dmin) * 10
+        if abs(self.dmin)< 0.4:
+            reward-=(0.4-self.dmin) * 10
         else:
-            reward+=5
+            reward+=10
         # **Collision Detection**
         collision = self.check_collision()
         if collision:
@@ -180,10 +186,10 @@ class DroneEnv3D(gym.Env):
         # print(f"📍 Drone Position: {self.drone_pos}, Target: {self.target}, Distance: {distance_total},Reward = {reward}")
         
         self.D = self.calculate_distance(self.drone_pos[0],self.drone_pos[1],self.drone_pos[2])
-        done = self.D < 2.0
+        done = self.D < 2
         if done:
             elapsed_time = time.time() - self.start_time
-            reward += 300  # Large reward for reaching the goal
+            reward += 350  # Large reward for reaching the goal
             print(f"🎯 Goal reached in {np.round(elapsed_time)} seconds! Resetting environment.")
             final_obs = self.get_observation()
             print(f"Total collision {self.collision_count}")
@@ -193,15 +199,34 @@ class DroneEnv3D(gym.Env):
         self.path.append(self.drone_pos.copy())
 
         return self.get_observation(), reward, self.D <= 2, {}
-
-
+    
+    def get_lidar_readings(self):
+        """Simulate LIDAR readings (distances in six directions: left, right, front, back, up, down)."""
+        readings = np.zeros(6)
+        directions = [
+            np.array([1, 0, 0]), np.array([-1, 0, 0]), np.array([0, 1, 0]),
+            np.array([0, -1, 0]), np.array([0, 0, 1]), np.array([0, 0, -1])
+        ]
+        
+        for i, direction in enumerate(directions):
+            for distance in np.linspace(0, self.space_size, 100):
+                point = self.drone_pos + direction * distance
+                if np.any(point < 0) or np.any(point > self.space_size):
+                    readings[i] = distance
+                    break
+                for obs in self.obstacles:
+                    ox, oy, r, h = obs
+                    if np.linalg.norm(point[:2] - np.array([ox, oy])) < r and point[2] < h:
+                        readings[i] = distance
+                        break
+        
+        return readings
+    
     def get_observation(self):
         """Return position, velocity, lidar, and imu readings."""
-        # lidar_readings = self.get_lidar_readings()
+        lidar_readings = self.get_lidar_readings()
         # imu_readings = self.get_imu_readings()
-        return np.concatenate([self.drone_pos, self.drone_vel])
-
-    
+        return np.concatenate([self.drone_pos, self.drone_vel,lidar_readings])
 
     def render(self):
         """Visualize the environment in 3D with the path."""
@@ -221,7 +246,7 @@ class DroneEnv3D(gym.Env):
         path = np.array(self.path)
         ax.plot(path[:, 0], path[:, 1], path[:, 2], color='blue', marker='o', markersize=3, label="Path")
 
-        ax.view_init(elev=90)
+        ax.view_init(elev=75)
         ax.set_xlabel("X")
         ax.set_ylabel("Y")
         ax.set_zlabel("Z")

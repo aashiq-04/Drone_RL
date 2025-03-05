@@ -12,4 +12,5 @@ astar/checkpoints1/
 astar/New_checkpoint_sac/
 astar/saved_plots/
 astar/ENV2.py
-astar/ENV3.py
+Airsim/
+*.npy
