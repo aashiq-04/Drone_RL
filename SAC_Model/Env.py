@@ -8,7 +8,7 @@ import math
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from mpl_toolkits.mplot3d import Axes3D
-from SAC_Model.CONFIG import OBSTACLES,MAP_SIZE,MAX_ACTION
+from CONFIG import OBSTACLES,MAP_SIZE,MAX_ACTION
 
 class DroneEnv3D(gym.Env):
     def __init__(self):
@@ -37,7 +37,7 @@ class DroneEnv3D(gym.Env):
         
     def generate_obstacle(self):
         max_attempts = 150  # Prevent infinite loops
-        min_clearance = 0.7 # Minimum required distance between obstacles
+        min_clearance = 0.75 # Minimum required distance between obstacles
         for _ in range(max_attempts):
             x = random.uniform(2, 8)
             y = random.uniform(2, 8)
@@ -216,7 +216,7 @@ class DroneEnv3D(gym.Env):
 
         attempts = 0
         while attempts < 50:
-            self.target = np.array([random.uniform(8,10), random.uniform(8, 10), random.uniform(8,10)], dtype=np.float64)
+            self.target = np.array([random.uniform(8,10), random.uniform(8, 10), random.uniform(8,9)], dtype=np.float64)
             if self.is_valid_position(self.target) and np.linalg.norm(self.drone_pos - self.target) > 4:
                 break
             attempts += 1

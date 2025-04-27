@@ -5,6 +5,7 @@ tensorflow
 stable-baselines3 
 gym
 Shimmy   
+seaborn
 pillow
 airsim
 torch

@@ -1,0 +1,14 @@
+MAX_EPISODES = 500
+MAX_STEPS = 500
+BATCH_SIZE = 128
+BUFFER_SIZE = int(1e5)
+STATE_DIM = 12  # (position, velocity)
+ACTION_DIM = 3  # (vx, vy, vz)
+MAX_ACTION = 0.2
+NUM_EPISODES = 10# Number of test episodes
+LOAD_CHECKPOINT=True
+
+
+OBSTACLES = 12
+
+MAP_SIZE=10
